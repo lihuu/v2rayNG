@@ -178,6 +178,26 @@
                     android:layout_marginTop="@dimen/padding_spacing_dp8"
                     android:layout_marginBottom="@dimen/padding_spacing_dp8"
                     android:entries="@array/outbound_tag" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/custom_outboud_tag_layout"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/routing_settings_custom_outbound_tag" />
+
+                <EditText
+                    android:id="@+id/custom_outbound_tag"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ems="10"
+                    android:inputType="text" />
             </LinearLayout>
 
         </LinearLayout>
