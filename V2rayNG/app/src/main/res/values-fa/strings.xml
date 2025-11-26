@@ -308,6 +308,7 @@
     <string name="routing_settings_network">شبکه</string>
     <string name="routing_settings_network_tip">[udp|tcp]</string>
     <string name="routing_settings_outbound_tag">برچسب خروجی</string>
+    <string name="routing_settings_custom_outbound_tag" translatable="false">CustomOutboundTag</string>
 
     <string name="connection_test_pending">اتصال را بررسی کنید</string>
     <string name="connection_test_testing">در حال آزمایش...</string>

@@ -3,8 +3,11 @@ package com.v2ray.ang.ui
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
+import android.widget.AdapterView
 import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
+import androidx.viewbinding.ViewBinding
 import com.v2ray.ang.R
 import com.v2ray.ang.databinding.ActivityRoutingEditBinding
 import com.v2ray.ang.dto.RulesetItem
@@ -34,6 +37,27 @@ class RoutingEditActivity : BaseActivity() {
         } else {
             clearServer()
         }
+
+        binding.spOutboundTag.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                // Get the selected item
+                val selectedTag = outbound_tag[position]
+
+                // When the user selects "custom" (assuming it's at index 3)
+                // show the custom input field. Otherwise, hide it.
+                if (position == 3) { // 3 corresponds to the 'custom' option
+                    binding.customOutboudTagLayout.visibility = View.VISIBLE
+                } else {
+                    binding.customOutboudTagLayout.visibility = View.GONE
+                    binding.customOutboundTag.text.clear()
+                }
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) {
+                // This is called when the selected item disappears from the list.
+                // You can leave it empty if you don't need to handle this case.
+            }
+        }
     }
 
     private fun bindingServer(rulesetItem: RulesetItem): Boolean {
@@ -47,11 +71,17 @@ class RoutingEditActivity : BaseActivity() {
         // outbound tag 是固定的
         // proxy direct block custom
         var outbound = Utils.arrayFind(outbound_tag, rulesetItem.outboundTag)
-        if(outbound==-1){
+        if (outbound == -1) {
             outbound = 3
         }
         // 如果是custom，就使用一个文本输入，指定用户自己的outbound tag
         binding.spOutboundTag.setSelection(outbound)
+        if (outbound == 3) {
+            binding.customOutboudTagLayout.visibility = View.VISIBLE
+            binding.customOutboundTag.text = Utils.getEditable(rulesetItem.outboundTag)
+        }else{
+            binding.customOutboudTagLayout.visibility = View.GONE
+        }
 
         return true
     }
@@ -76,7 +106,11 @@ class RoutingEditActivity : BaseActivity() {
                 ?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
             port = binding.etPort.text.toString().takeIf { it.isNotEmpty() }
             network = binding.etNetwork.text.toString().takeIf { it.isNotEmpty() }
-            outboundTag = outbound_tag[binding.spOutboundTag.selectedItemPosition]
+            if (binding.spOutboundTag.selectedItemPosition == 3) {
+                outboundTag = binding.customOutboundTag.text.toString()
+            }else{
+                outboundTag = outbound_tag[binding.spOutboundTag.selectedItemPosition]
+            }
         }
 
         if (rulesetItem.remarks.isNullOrEmpty()) {

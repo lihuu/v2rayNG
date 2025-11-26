@@ -22,9 +22,9 @@
 
     <!--ServerActivity-->
     <string name="title_server">Configuration</string>
-    <string name="title_raw_config">Raw Config</string>
     <string name="menu_item_add_config">Add configuration</string>
-    <string name="menu_item_view_raw_config">View Raw Config</string>
+    <string name="title_raw_config" translatable="false">Raw Config</string>
+    <string name="menu_item_view_raw_config" translatable="false">View Raw Config</string>
     <string name="menu_item_save_config">Save configuration</string>
     <string name="menu_item_del_config">Delete configuration</string>
     <string name="menu_item_import_config_qrcode">Import configuration from QRcode</string>
@@ -316,6 +316,7 @@
     <string name="routing_settings_network" translatable="false">network</string>
     <string name="routing_settings_network_tip" translatable="false">[udp|tcp]</string>
     <string name="routing_settings_outbound_tag" translatable="false">outboundTag</string>
+    <string name="routing_settings_custom_outbound_tag" translatable="false">CustomOutboundTag</string>
 
     <string name="connection_test_pending">Check Connectivity</string>
     <string name="connection_test_testing">Testing…</string>

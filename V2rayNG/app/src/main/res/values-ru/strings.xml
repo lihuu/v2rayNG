@@ -310,6 +310,7 @@
     <string name="routing_settings_network">Сеть</string>
     <string name="routing_settings_network_tip">[udp|tcp]</string>
     <string name="routing_settings_outbound_tag">Исходящее подключение</string>
+    <string name="routing_settings_custom_outbound_tag" translatable="false">CustomOutboundTag</string>
 
     <string name="connection_test_pending">Проверить подключение</string>
     <string name="connection_test_testing">Проверка…</string>

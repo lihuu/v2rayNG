@@ -20,6 +20,8 @@
     <string name="toast_services_failure">启动服务失败</string>
 
     <!--ServerActivity-->
+    <string name="title_raw_config" translatable="false">完整配置</string>
+    <string name="menu_item_view_raw_config" translatable="false">查看完整配置</string>
     <string name="title_server">配置项</string>
     <string name="menu_item_add_config">添加配置</string>
     <string name="menu_item_save_config">保存配置</string>
