@@ -37,6 +37,7 @@ import com.v2ray.ang.extension.toastError
 import com.v2ray.ang.handler.AngConfigManager
 import com.v2ray.ang.handler.MigrateManager
 import com.v2ray.ang.handler.MmkvManager
+import com.v2ray.ang.handler.V2rayConfigManager
 import com.v2ray.ang.helper.SimpleItemTouchHelperCallback
 import com.v2ray.ang.handler.V2RayServiceManager
 import com.v2ray.ang.util.Utils
@@ -373,6 +374,26 @@ class MainActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
             true
         }
 
+        // 写一个页面，展示全部的配置格式
+        R.id.view_raw_config -> {
+            val guid = MmkvManager.getSelectServer()
+            if (guid.isNullOrEmpty()) {
+                toast(R.string.title_file_chooser)
+            } else {
+                val intent = Intent(this, RawConfigActivity::class.java)
+                lifecycleScope.launch(Dispatchers.IO) {
+                    val result = mainViewModel.createV2RayConfig(this@MainActivity, guid)
+                    if (result.status) {
+                        intent.putExtra("config", result.content)
+                        startActivity(intent)
+                    } else {
+                        toast(R.string.toast_failure)
+                    }
+                }
+            }
+            true
+        }
+
         R.id.ping_all -> {
             toast(getString(R.string.connection_test_testing_count, mainViewModel.serversCache.count()))
             mainViewModel.testAllTcping()
@@ -385,6 +406,7 @@ class MainActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
             true
         }
 
+        // 生成当前组的智能选择配置
         R.id.intelligent_selection_all -> {
             if (MmkvManager.decodeSettingsString(AppConfig.PREF_OUTBOUND_DOMAIN_RESOLVE_METHOD, "1") != "0") {
                 toast(getString(R.string.pre_resolving_domain))

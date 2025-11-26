@@ -150,6 +150,10 @@
         <activity
             android:name=".ui.AboutActivity"
             android:exported="false" />
+        <activity
+            android:name=".ui.RawConfigActivity"
+            android:exported="false"
+            android:theme="@style/AppThemeDayNight.NoActionBar" />
 
         <service
             android:name=".service.V2RayVpnService"

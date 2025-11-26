@@ -40,13 +40,17 @@ object V2rayConfigManager {
      * @param guid The unique identifier for the V2ray configuration.
      * @return A ConfigResult object containing the configuration details or indicating failure.
      */
-    fun getV2rayConfig(context: Context, guid: String): ConfigResult {
+    fun getV2rayConfig(
+        context: Context,
+        guid: String,
+        profileItems: List<ProfileItem>? = null
+    ): ConfigResult {
         try {
             val config = MmkvManager.decodeServerConfig(guid) ?: return ConfigResult(false)
             return if (config.configType == EConfigType.CUSTOM) {
                 getV2rayCustomConfig(guid, config)
             } else {
-                getV2rayNormalConfig(context, guid, config)
+                getV2rayNormalConfig(context, guid, config,profileItems)
             }
         } catch (e: Exception) {
             Log.e(AppConfig.TAG, "Failed to get V2ray config", e)
@@ -116,7 +120,12 @@ object V2rayConfigManager {
      * @param config The profile item containing the configuration details.
      * @return A ConfigResult object containing the result of the configuration retrieval.
      */
-    private fun getV2rayNormalConfig(context: Context, guid: String, config: ProfileItem): ConfigResult {
+    private fun getV2rayNormalConfig(
+        context: Context,
+        guid: String,
+        config: ProfileItem,
+        allProfileItems: List<ProfileItem>? = null
+    ): ConfigResult {
         val result = ConfigResult(false)
 
         val address = config.server ?: return result
@@ -128,7 +137,8 @@ object V2rayConfigManager {
         }
 
         val v2rayConfig = initV2rayConfig(context) ?: return result
-        v2rayConfig.log.loglevel = MmkvManager.decodeSettingsString(AppConfig.PREF_LOGLEVEL) ?: "warning"
+        v2rayConfig.log.loglevel =
+            MmkvManager.decodeSettingsString(AppConfig.PREF_LOGLEVEL) ?: "warning"
         v2rayConfig.remarks = config.remarks
 
         getInbounds(v2rayConfig)
@@ -137,6 +147,13 @@ object V2rayConfigManager {
             result.socksPort = getPlusOutbounds(v2rayConfig, config) ?: return result
         } else {
             getOutbounds(v2rayConfig, config) ?: return result
+            allProfileItems?.forEachIndexed { index, item ->
+                val outbound = convertProfile2Outbound(item);
+                if (outbound != null && updateOutboundWithGlobalSettings(outbound)) {
+                    outbound.tag = AppConfig.TAG_PROXY + (index + 1)
+                    v2rayConfig.outbounds.add(outbound)
+                }
+            }
             getMoreOutbounds(v2rayConfig, config.subscriptionId)
         }
 
@@ -146,16 +163,20 @@ object V2rayConfigManager {
 
         getDns(v2rayConfig)
 
-        if (MmkvManager.decodeSettingsBool(AppConfig.PREF_LOCAL_DNS_ENABLED) == true) {
+        if (MmkvManager.decodeSettingsBool(AppConfig.PREF_LOCAL_DNS_ENABLED)) {
             getCustomLocalDns(v2rayConfig)
         }
-        if (MmkvManager.decodeSettingsBool(AppConfig.PREF_SPEED_ENABLED) != true) {
+        if (!MmkvManager.decodeSettingsBool(AppConfig.PREF_SPEED_ENABLED)) {
             v2rayConfig.stats = null
             v2rayConfig.policy = null
         }
 
         //Resolve and add to DNS Hosts
-        if (MmkvManager.decodeSettingsString(AppConfig.PREF_OUTBOUND_DOMAIN_RESOLVE_METHOD, "1") == "1") {
+        if (MmkvManager.decodeSettingsString(
+                AppConfig.PREF_OUTBOUND_DOMAIN_RESOLVE_METHOD,
+                "1"
+            ) == "1"
+        ) {
             resolveOutboundDomainsToHosts(v2rayConfig)
         }
 
@@ -165,7 +186,10 @@ object V2rayConfigManager {
         return result
     }
 
-    private fun genV2rayMultipleConfig(context: Context, configList: List<ProfileItem>): V2rayConfig? {
+    private fun genV2rayMultipleConfig(
+        context: Context,
+        configList: List<ProfileItem>
+    ): V2rayConfig? {
         val validConfigs = configList.asSequence().filter { it.server.isNotNullEmpty() }
             .filter { !Utils.isPureIpAddress(it.server!!) || Utils.isValidUrl(it.server!!) }
             .filter { it.configType != EConfigType.CUSTOM }
@@ -187,7 +211,8 @@ object V2rayConfigManager {
         }
 
         val v2rayConfig = initV2rayConfig(context) ?: return null
-        v2rayConfig.log.loglevel = MmkvManager.decodeSettingsString(AppConfig.PREF_LOGLEVEL) ?: "warning"
+        v2rayConfig.log.loglevel =
+            MmkvManager.decodeSettingsString(AppConfig.PREF_LOGLEVEL) ?: "warning"
 
         val subIds = configList.map { it.subscriptionId }.toHashSet()
         val remarks = if (subIds.size == 1 && subIds.first().isNotEmpty()) {
@@ -232,7 +257,11 @@ object V2rayConfigManager {
         }
 
         //Resolve and add to DNS Hosts
-        if (MmkvManager.decodeSettingsString(AppConfig.PREF_OUTBOUND_DOMAIN_RESOLVE_METHOD, "1") == "1") {
+        if (MmkvManager.decodeSettingsString(
+                AppConfig.PREF_OUTBOUND_DOMAIN_RESOLVE_METHOD,
+                "1"
+            ) == "1"
+        ) {
             resolveOutboundDomainsToHosts(v2rayConfig)
         }
 
@@ -247,7 +276,11 @@ object V2rayConfigManager {
      * @param config The profile item containing the configuration details.
      * @return A ConfigResult object containing the result of the configuration retrieval.
      */
-    private fun getV2rayNormalConfig4Speedtest(context: Context, guid: String, config: ProfileItem): ConfigResult {
+    private fun getV2rayNormalConfig4Speedtest(
+        context: Context,
+        guid: String,
+        config: ProfileItem
+    ): ConfigResult {
         val result = ConfigResult(false)
 
         val address = config.server ?: return result
@@ -267,7 +300,8 @@ object V2rayConfigManager {
             getMoreOutbounds(v2rayConfig, config.subscriptionId)
         }
 
-        v2rayConfig.log.loglevel = MmkvManager.decodeSettingsString(AppConfig.PREF_LOGLEVEL) ?: "warning"
+        v2rayConfig.log.loglevel =
+            MmkvManager.decodeSettingsString(AppConfig.PREF_LOGLEVEL) ?: "warning"
         v2rayConfig.inbounds.clear()
         v2rayConfig.routing.rules.clear()
         v2rayConfig.dns = null
@@ -470,7 +504,7 @@ object V2rayConfigManager {
                 )
             }
 
-            if (MmkvManager.decodeSettingsBool(AppConfig.PREF_USE_HEV_TUNNEL ,true) == false) {
+            if (MmkvManager.decodeSettingsBool(AppConfig.PREF_USE_HEV_TUNNEL, true) == false) {
 
                 // DNS inbound
                 val remoteDns = SettingsManager.getRemoteDnsServers()
@@ -593,7 +627,8 @@ object V2rayConfigManager {
             // hardcode popular Android Private DNS rule to fix localhost DNS problem
             hosts[AppConfig.DNS_ALIDNS_DOMAIN] = AppConfig.DNS_ALIDNS_ADDRESSES
             hosts[AppConfig.DNS_CLOUDFLARE_ONE_DOMAIN] = AppConfig.DNS_CLOUDFLARE_ONE_ADDRESSES
-            hosts[AppConfig.DNS_CLOUDFLARE_DNS_COM_DOMAIN] = AppConfig.DNS_CLOUDFLARE_DNS_COM_ADDRESSES
+            hosts[AppConfig.DNS_CLOUDFLARE_DNS_COM_DOMAIN] =
+                AppConfig.DNS_CLOUDFLARE_DNS_COM_ADDRESSES
             hosts[AppConfig.DNS_CLOUDFLARE_DNS_DOMAIN] = AppConfig.DNS_CLOUDFLARE_DNS_ADDRESSES
             hosts[AppConfig.DNS_DNSPOD_DOMAIN] = AppConfig.DNS_DNSPOD_ADDRESSES
             hosts[AppConfig.DNS_GOOGLE_DOMAIN] = AppConfig.DNS_GOOGLE_ADDRESSES
@@ -722,7 +757,7 @@ object V2rayConfigManager {
      */
     private fun getMoreOutbounds(v2rayConfig: V2rayConfig, subscriptionId: String): Boolean {
         //fragment proxy
-        if (MmkvManager.decodeSettingsBool(AppConfig.PREF_FRAGMENT_ENABLED, false) == true) {
+        if (MmkvManager.decodeSettingsBool(AppConfig.PREF_FRAGMENT_ENABLED, false)) {
             return false
         }
 
@@ -775,7 +810,10 @@ object V2rayConfigManager {
      * @param outbound The outbound connection to update
      * @return true if the update was successful, false otherwise
      */
-    private fun updateOutboundWithGlobalSettings(outbound: V2rayConfig.OutboundBean): Boolean {
+    private fun updateOutboundWithGlobalSettings(outbound: V2rayConfig.OutboundBean?): Boolean {
+        if (outbound == null) {
+            return false
+        }
         try {
             var muxEnabled = MmkvManager.decodeSettingsBool(AppConfig.PREF_MUX_ENABLED, false)
             val protocol = outbound.protocol
@@ -791,12 +829,21 @@ object V2rayConfigManager {
                 muxEnabled = false
             }
 
-            if (muxEnabled == true) {
+            if (muxEnabled) {
                 outbound.mux?.enabled = true
-                outbound.mux?.concurrency = MmkvManager.decodeSettingsString(AppConfig.PREF_MUX_CONCURRENCY, "8").orEmpty().toInt()
-                outbound.mux?.xudpConcurrency = MmkvManager.decodeSettingsString(AppConfig.PREF_MUX_XUDP_CONCURRENCY, "16").orEmpty().toInt()
-                outbound.mux?.xudpProxyUDP443 = MmkvManager.decodeSettingsString(AppConfig.PREF_MUX_XUDP_QUIC, "reject")
-                if (protocol.equals(EConfigType.VLESS.name, true) && outbound.settings?.vnext?.first()?.users?.first()?.flow?.isNotEmpty() == true) {
+                outbound.mux?.concurrency =
+                    MmkvManager.decodeSettingsString(AppConfig.PREF_MUX_CONCURRENCY, "8").orEmpty()
+                        .toInt()
+                outbound.mux?.xudpConcurrency =
+                    MmkvManager.decodeSettingsString(AppConfig.PREF_MUX_XUDP_CONCURRENCY, "16")
+                        .orEmpty().toInt()
+                outbound.mux?.xudpProxyUDP443 =
+                    MmkvManager.decodeSettingsString(AppConfig.PREF_MUX_XUDP_QUIC, "reject")
+                if (protocol.equals(
+                        EConfigType.VLESS.name,
+                        true
+                    ) && outbound.settings?.vnext?.first()?.users?.first()?.flow?.isNotEmpty() == true
+                ) {
                     outbound.mux?.concurrency = -1
                 }
             } else {
@@ -810,7 +857,7 @@ object V2rayConfigManager {
                 } else {
                     outbound.settings?.address as List<*>
                 }
-                if (MmkvManager.decodeSettingsBool(AppConfig.PREF_PREFER_IPV6) != true) {
+                if (!MmkvManager.decodeSettingsBool(AppConfig.PREF_PREFER_IPV6)) {
                     localTunAddr = listOf(localTunAddr.first())
                 }
                 outbound.settings?.address = localTunAddr
@@ -851,8 +898,7 @@ object V2rayConfigManager {
      *
      * @param v2rayConfig The V2ray configuration object to be modified with balancing settings
      */
-    private fun getBalance(v2rayConfig: V2rayConfig)
-    {
+    private fun getBalance(v2rayConfig: V2rayConfig) {
         try {
             v2rayConfig.routing.rules.forEach { rule ->
                 if (rule.outboundTag == "proxy") {
@@ -861,7 +907,11 @@ object V2rayConfigManager {
                 }
             }
 
-            if (MmkvManager.decodeSettingsString(AppConfig.PREF_INTELLIGENT_SELECTION_METHOD, "0") == "0") {
+            if (MmkvManager.decodeSettingsString(
+                    AppConfig.PREF_INTELLIGENT_SELECTION_METHOD,
+                    "0"
+                ) == "0"
+            ) {
                 val balancer = V2rayConfig.RoutingBean.BalancerBean(
                     tag = "proxy-round",
                     selector = listOf("proxy-"),
@@ -872,7 +922,8 @@ object V2rayConfigManager {
                 v2rayConfig.routing.balancers = listOf(balancer)
                 v2rayConfig.observatory = V2rayConfig.ObservatoryObject(
                     subjectSelector = listOf("proxy-"),
-                    probeUrl = MmkvManager.decodeSettingsString(AppConfig.PREF_DELAY_TEST_URL) ?: AppConfig.DELAY_TEST_URL,
+                    probeUrl = MmkvManager.decodeSettingsString(AppConfig.PREF_DELAY_TEST_URL)
+                        ?: AppConfig.DELAY_TEST_URL,
                     probeInterval = "3m",
                     enableConcurrency = true
                 )
@@ -888,7 +939,8 @@ object V2rayConfigManager {
                 v2rayConfig.burstObservatory = V2rayConfig.BurstObservatoryObject(
                     subjectSelector = listOf("proxy-"),
                     pingConfig = V2rayConfig.BurstObservatoryObject.PingConfigObject(
-                        destination = MmkvManager.decodeSettingsString(AppConfig.PREF_DELAY_TEST_URL) ?: AppConfig.DELAY_TEST_URL,
+                        destination = MmkvManager.decodeSettingsString(AppConfig.PREF_DELAY_TEST_URL)
+                            ?: AppConfig.DELAY_TEST_URL,
                         interval = "5m",
                         sampling = 2,
                         timeout = "30s"
@@ -928,7 +980,7 @@ object V2rayConfigManager {
      */
     private fun updateOutboundFragment(v2rayConfig: V2rayConfig): Boolean {
         try {
-            if (MmkvManager.decodeSettingsBool(AppConfig.PREF_FRAGMENT_ENABLED, false) == false) {
+            if (!MmkvManager.decodeSettingsBool(AppConfig.PREF_FRAGMENT_ENABLED, false)) {
                 return true
             }
             if (v2rayConfig.outbounds[0].streamSettings?.security != AppConfig.TLS
@@ -1117,7 +1169,10 @@ object V2rayConfigManager {
      * @param profileItem The profile containing transport configuration
      * @return The Server Name Indication (SNI) value to use, or null if not applicable
      */
-    fun populateTransportSettings(streamSettings: StreamSettingsBean, profileItem: ProfileItem): String? {
+    fun populateTransportSettings(
+        streamSettings: StreamSettingsBean,
+        profileItem: ProfileItem
+    ): String? {
         val transport = profileItem.network.orEmpty()
         val headerType = profileItem.headerType
         val host = profileItem.host
@@ -1140,8 +1195,10 @@ object V2rayConfigManager {
                     tcpSetting.header.type = AppConfig.HEADER_TYPE_HTTP
                     if (!TextUtils.isEmpty(host) || !TextUtils.isEmpty(path)) {
                         val requestObj = StreamSettingsBean.TcpSettingsBean.HeaderBean.RequestBean()
-                        requestObj.headers.Host = host.orEmpty().split(",").map { it.trim() }.filter { it.isNotEmpty() }
-                        requestObj.path = path.orEmpty().split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                        requestObj.headers.Host =
+                            host.orEmpty().split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                        requestObj.path =
+                            path.orEmpty().split(",").map { it.trim() }.filter { it.isNotEmpty() }
                         tcpSetting.header.request = requestObj
                         sni = requestObj.headers.Host?.getOrNull(0)
                     }
@@ -1197,7 +1254,8 @@ object V2rayConfigManager {
             NetworkType.H2.type, NetworkType.HTTP.type -> {
                 streamSettings.network = NetworkType.H2.type
                 val h2Setting = StreamSettingsBean.HttpSettingsBean()
-                h2Setting.host = host.orEmpty().split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                h2Setting.host =
+                    host.orEmpty().split(",").map { it.trim() }.filter { it.isNotEmpty() }
                 sni = h2Setting.host.getOrNull(0)
                 h2Setting.path = path ?: "/"
                 streamSettings.httpSettings = h2Setting
@@ -1234,7 +1292,11 @@ object V2rayConfigManager {
      * @param profileItem The profile containing security configuration
      * @param sniExt An external SNI value to use if the profile doesn't specify one
      */
-    fun populateTlsSettings(streamSettings: StreamSettingsBean, profileItem: ProfileItem, sniExt: String?) {
+    fun populateTlsSettings(
+        streamSettings: StreamSettingsBean,
+        profileItem: ProfileItem,
+        sniExt: String?
+    ) {
         val streamSecurity = profileItem.security.orEmpty()
         val allowInsecure = profileItem.insecure == true
         val sni = if (profileItem.sni.isNullOrEmpty()) {
@@ -1259,7 +1321,8 @@ object V2rayConfigManager {
             allowInsecure = allowInsecure,
             serverName = if (sni.isNullOrEmpty()) null else sni,
             fingerprint = if (fingerprint.isNullOrEmpty()) null else fingerprint,
-            alpn = if (alpns.isNullOrEmpty()) null else alpns.split(",").map { it.trim() }.filter { it.isNotEmpty() },
+            alpn = if (alpns.isNullOrEmpty()) null else alpns.split(",").map { it.trim() }
+                .filter { it.isNotEmpty() },
             publicKey = if (publicKey.isNullOrEmpty()) null else publicKey,
             shortId = if (shortId.isNullOrEmpty()) null else shortId,
             spiderX = if (spiderX.isNullOrEmpty()) null else spiderX,

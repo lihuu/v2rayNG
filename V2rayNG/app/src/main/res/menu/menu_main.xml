@@ -83,6 +83,10 @@
         android:title="@string/title_export_all"
         app:showAsAction="never" />
     <item
+        android:id="@+id/view_raw_config"
+        android:title="@string/menu_item_view_raw_config"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/intelligent_selection_all"
         android:title="@string/title_create_intelligent_selection_all_server"
         app:showAsAction="never" />

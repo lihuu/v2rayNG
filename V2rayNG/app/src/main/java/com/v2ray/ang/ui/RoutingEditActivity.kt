@@ -44,7 +44,13 @@ class RoutingEditActivity : BaseActivity() {
         binding.etPort.text = Utils.getEditable(rulesetItem.port)
         binding.etProtocol.text = Utils.getEditable(rulesetItem.protocol?.joinToString(","))
         binding.etNetwork.text = Utils.getEditable(rulesetItem.network)
-        val outbound = Utils.arrayFind(outbound_tag, rulesetItem.outboundTag)
+        // outbound tag 是固定的
+        // proxy direct block custom
+        var outbound = Utils.arrayFind(outbound_tag, rulesetItem.outboundTag)
+        if(outbound==-1){
+            outbound = 3
+        }
+        // 如果是custom，就使用一个文本输入，指定用户自己的outbound tag
         binding.spOutboundTag.setSelection(outbound)
 
         return true
