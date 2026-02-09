@@ -131,7 +131,7 @@ class V2RayVpnService : VpnService(), ServiceControl {
             return
         }
 
-        if (configureVpnService() != true) {
+        if (!configureVpnService()) {
             return
         }
 
@@ -259,7 +259,7 @@ class V2RayVpnService : VpnService(), ServiceControl {
         val selfPackageName = BuildConfig.APPLICATION_ID
 
         // If per-app proxy is not enabled, disallow the VPN service's own package and return
-        if (MmkvManager.decodeSettingsBool(AppConfig.PREF_PER_APP_PROXY) == false) {
+        if (!MmkvManager.decodeSettingsBool(AppConfig.PREF_PER_APP_PROXY)) {
             builder.addDisallowedApplication(selfPackageName)
             return
         }
